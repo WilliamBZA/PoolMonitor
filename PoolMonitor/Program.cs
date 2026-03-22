@@ -17,12 +17,6 @@ namespace PoolMonitor
         // Adjust this to match your wiring (e.g., GPIO 34 = ADC channel 6 on ESP32).
         private const int OrpAdcChannel = 6;
 
-        // dfRobot ORP sensor offset voltage (mV). Calibrate with the potentiometer on the sensor board.
-        private const double OrpOffset = 0;
-
-        // ESP32 ADC reference voltage in mV
-        private const double AdcReferenceVoltageMv = 3300.0;
-
         // Reading interval in milliseconds
         private const int ReadIntervalMs = 60000 * 5;
 
