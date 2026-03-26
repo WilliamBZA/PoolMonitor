@@ -38,19 +38,19 @@ namespace PoolMonitor
             ConnectToWiFi();
 
             // ORP sensor setup
-            AdcController adcController = new AdcController();
-            AdcChannel orpChannel = adcController.OpenChannel(OrpAdcChannel);
+            var adcController = new AdcController();
+            var orpChannel = adcController.OpenChannel(OrpAdcChannel);
 
-            int adcMaxValue = (int)Math.Pow(2, adcController.ResolutionInBits) - 1;
+            var adcMaxValue = (int)Math.Pow(2, adcController.ResolutionInBits) - 1;
             Debug($"ADC resolution: {adcController.ResolutionInBits} bits (max value: {adcMaxValue})");
 
             // DS18B20 temperature sensor setup
             Configuration.SetPinFunction(16, DeviceFunction.COM3_RX);
             Configuration.SetPinFunction(17, DeviceFunction.COM3_TX);
-            OneWireHost oneWire = new OneWireHost();
+            var oneWire = new OneWireHost();
 
             // Home Assistant MQTT discovery setup
-            HomeAssistant ha = new HomeAssistant(
+            var ha = new HomeAssistant(
                 "Pool Monitor",
                 MqttBrokerIp,
                 MqttBrokerPort,
@@ -64,25 +64,21 @@ namespace PoolMonitor
             ha.Connect();
             Debug("Connected to MQTT broker. Device registered with Home Assistant.");
 
-            var rebootTimer = new Timer((state) =>
-            {
-                Power.RebootDevice(nanoFramework.Runtime.Native.RebootOption.NormalReboot);
-            }, null, 1000 * 60 * 60, 1000 * 60 * 60); // Reboot device every hour
-
             while (true)
             {
-                double orpMv = ReadOrpMillivolts(orpChannel);
-                double temperatureC = ReadTemperature(oneWire);
+                var orpMv = ReadOrpMillivolts(orpChannel);
+                if (orpMv > 0)
+                {
+                    orpSensor.UpdateValue(orpMv.ToString("F1"));
+                }
 
-                Debug($"ORP Voltage: {orpMv:F1} mV - Temp: {temperatureC:F2}C");
-
-                orpSensor.UpdateValue(orpMv.ToString("F1"));
-
-                if (temperatureC != double.MinValue)
+                var temperatureC = ReadTemperature(oneWire);
+                if (temperatureC != double.MinValue && temperatureC > 0)
                 {
                     temperatureSensor.UpdateValue(temperatureC.ToString("F2"));
                 }
 
+                Debug($"ORP Voltage: {orpMv:F1} mV - Temp: {temperatureC:F2}C");
                 Thread.Sleep(ReadIntervalMs);
             }
         }
@@ -94,9 +90,9 @@ namespace PoolMonitor
         private static double ReadOrpMillivolts(AdcChannel channel)
         {
             const int sampleCount = 100;
-            int total = 0;
+            var total = 0;
 
-            for (int i = 0; i < sampleCount; i++)
+            for (var i = 0; i < sampleCount; i++)
             {
                 total += channel.ReadValue();
                 Thread.Sleep(10);
@@ -131,12 +127,12 @@ namespace PoolMonitor
             oneWire.WriteByte(SkipRomCommand);
             oneWire.WriteByte(ReadScratchpadCommand);
 
-            byte lsb = (byte)oneWire.ReadByte();
-            byte msb = (byte)oneWire.ReadByte();
+            var lsb = (byte)oneWire.ReadByte();
+            var msb = (byte)oneWire.ReadByte();
 
             // Convert raw value to temperature in Celsius
             // DS18B20 returns a 16-bit signed value in 1/16 degree increments
-            int raw = (msb << 8) | lsb;
+            var raw = (msb << 8) | lsb;
 
             // Handle negative temperatures (two's complement)
             if ((raw & 0x8000) != 0)
